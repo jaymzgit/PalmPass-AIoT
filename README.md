@@ -6,7 +6,6 @@ That is where our system, called PalmPass, comes in to address these issues by u
 (1) Student Registration, which authenticates students’ palms while marking attendance, 
 (2) Lecturer Verification of Assigned Seats, ensuring students sit in their designated seats using real-time biometric and seating data, and 
 (3) Bathroom Logging and Tracking, which records students’ exits and returns with timestamps.
-<<<<<<< HEAD
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
