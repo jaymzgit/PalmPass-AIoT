@@ -1,321 +1,170 @@
-import { MaterialIcons } from "@expo/vector-icons";
-import { useState } from "react";
+// app/loginpage.tsx
+
+import { useRouter } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  Alert,
+  KeyboardAvoidingView, Platform, ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+  Text, TextInput, TouchableOpacity,
+  View
 } from "react-native";
+import { firebaseAuth } from "../src/firebase";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [role, setRole] = useState<"lecturer" | "student">("lecturer");
+  const [loading, setLoading] = useState(false);
+  
+  // State for tracking focus to highlight inputs
+  const [isEmailFocused, setIsEmailFocused] = useState(false);
+  const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
-  const [errors, setErrors] = useState({
-    email: "",
-    password: "",
-  });
-
-  const handleLogin = () => {
-    const newErrors = {
-      email: email ? "" : "Email is required",
-      password: password ? "" : "Password is required",
-    };
-
-    setErrors(newErrors);
-
-    // if any error exists, don't continue
-    if (newErrors.email || newErrors.password) return;
-
-    // simulate login without redirect or alert
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 700);
+  const handleLogin = async () => {
+    if (!email || !password) return Alert.alert("Error", "Please fill in all fields");
+    
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(firebaseAuth, email, password);
+      // Link to Dashboard
+      router.replace("./lecturer-dashboard/");
+    } catch (err: any) {
+      Alert.alert("Login Failed","Email or Password is incorrect");
+    } finally {
+      setLoading(false);  
+    }
   };
+  
+  useEffect(() => {
+    if (firebaseAuth.currentUser) {
+      router.replace("/lecturer-dashboard");
+    }
+  }, []);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
+    // KeyboardAvoidingView wraps the entire content
+    // 'padding' behavior works best for iOS, 'height' for Android might be better 
+    // or sometimes 'position' for more control. We'll keep your original 'padding' 
+    // for iOS and 'height' for Android, which is a common setup.
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      style={styles.keyboardAvoidingContainer}
     >
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",   // centers everything vertically
-          paddingVertical: 0,
-        }}
+      {/* ScrollView is necessary so the content can move up with the keyboard */}
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.title}>PalmPass</Text>
+        <Text style={styles.subtitle}>Lecturer Login</Text>
 
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.container}>
-          
-          {/* HEADER */}
-          <View style={styles.header}>
-            <Text style={styles.title}>PalmPass</Text>
-            <Text style={styles.subtitle}>Attendance & Exam Management</Text>
-          </View>
-
-          {/* LOGIN CARD */}
-          <View style={styles.formContainer}>
-
-            {/* ROLE SWITCH */}
-            <View style={{ marginBottom: 12 }}>
-              <Text style={styles.inputLabel}>Login as</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity
-                  onPress={() => setRole("lecturer")}
-                  style={[styles.rolePill, role === "lecturer" && styles.rolePillActive]}
-                >
-                  <Text
-                    style={[
-                      styles.rolePillText,
-                      role === "lecturer" && styles.rolePillTextActive,
-                    ]}
-                  >
-                    Lecturer
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => setRole("student")}
-                  style={[styles.rolePill, role === "student" && styles.rolePillActive]}
-                >
-                  <Text
-                    style={[
-                      styles.rolePillText,
-                      role === "student" && styles.rolePillTextActive,
-                    ]}
-                  >
-                    Student
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* EMAIL */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-
-              <View
-                style={[
-                  styles.inputContainer,
-                  errors.email ? styles.inputErrorBorder : null,
-                ]}
-              >
-                <MaterialIcons name="email" size={20} color="#999" />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#999"
-                  value={email}
-                  onChangeText={(t) => {
-                    setEmail(t);
-                    setErrors({ ...errors, email: "" });
-                  }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-              </View>
-
-              {errors.email ? (
-                <Text style={styles.errorText}>{errors.email}</Text>
-              ) : null}
-            </View>
-
-            {/* PASSWORD */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Password</Text>
-
-              <View
-                style={[
-                  styles.inputContainer,
-                  errors.password ? styles.inputErrorBorder : null,
-                ]}
-              >
-                <MaterialIcons name="lock" size={20} color="#999" />
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#999"
-                  value={password}
-                  onChangeText={(t) => {
-                    setPassword(t);
-                    setErrors({ ...errors, password: "" });
-                  }}
-                  secureTextEntry={!showPassword}
-                  editable={!isLoading}
-                  autoCorrect={false}
-                  autoCapitalize="none"
-                  importantForAutofill="no"
-                  autoComplete="off"
-                  textContentType="none"
-                />
-
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <MaterialIcons
-                    name={showPassword ? "visibility" : "visibility-off"}
-                    size={20}
-                    color="#999"
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-            </View>
-
-            {/* LOGIN BUTTON */}
-            <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <Text style={styles.loginButtonText}>Logging in...</Text>
-              ) : (
-                <>
-                  <MaterialIcons name="login" size={20} color="#fff" />
-                  <Text style={styles.loginButtonText}>Login</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>PalmPass © 2025</Text>
-          </View>
+        {/* Email Input Container - Dynamic Styling */}
+        <View style={[
+          styles.inputContainer,
+          isEmailFocused && styles.inputFocused // Apply focus style if true
+        ]}>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Email" 
+            placeholderTextColor="#888" 
+            value={email} 
+            onChangeText={setEmail} 
+            autoCapitalize="none" 
+            // Focus Handlers
+            onFocus={() => setIsEmailFocused(true)}
+            onBlur={() => setIsEmailFocused(false)}
+            keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => { /* Focus next field */ }}
+          />
         </View>
+        
+        {/* Password Input Container - Dynamic Styling */}
+        <View style={[
+          styles.inputContainer,
+          isPasswordFocused && styles.inputFocused // Apply focus style if true
+        ]}>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Password" 
+            placeholderTextColor="#888" 
+            value={password} 
+            onChangeText={setPassword} 
+            secureTextEntry 
+            // Focus Handlers
+            onFocus={() => setIsPasswordFocused(true)}
+            onBlur={() => setIsPasswordFocused(false)}
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+          />
+        </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? "Logging in..." : "Login"}</Text>
+        </TouchableOpacity>
+        
+        {/* Adding a spacer View for better spacing on small screens when the keyboard is up */}
+        <View style={styles.spacer} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-    paddingVertical: 0,
-
-    // reduced spacing so header sits directly above the login card
-    gap: 12,
-    justifyContent: "center",
-    alignItems: "center",
-},
-
-  header: {
-    alignItems: "center",
-    marginBottom: 8,
+  // New style for KeyboardAvoidingView to ensure it takes up full screen
+  keyboardAvoidingContainer: { 
+    flex: 1, 
+    backgroundColor: "#f5f5f5" 
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#000",
+  // Renamed the original 'container' to 'scrollContainer' and kept flexGrow: 1 
+  // to ensure content is centered vertically when there's enough space.
+  scrollContainer: { 
+    flexGrow: 1, 
+    justifyContent: "center", 
+    padding: 24, 
   },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
+  title: { 
+    fontSize: 32, 
+    fontWeight: "bold", 
+    textAlign: "center", 
+    color: "#000", 
+    marginBottom: 5 
   },
-
-  formContainer: {
-    backgroundColor: "#fff",
-    width: "92%",
-    maxWidth: 520,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+  subtitle: { 
+    fontSize: 16, 
+    textAlign: "center", 
+    color: "#666", 
+    marginBottom: 30 
   },
-  formTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#000",
-    marginBottom: 20,
+  inputContainer: { 
+    backgroundColor: "#fff", 
+    borderRadius: 10, 
+    marginBottom: 15, 
+    borderWidth: 1, 
+    borderColor: "#ddd" // Default border color
   },
-
-  inputGroup: { marginBottom: 16 },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#000",
-    marginBottom: 8,
+  // NEW: Style to apply when the input is focused
+  inputFocused: {
+    borderColor: "#007AFF", // Highlight color (e.g., your primary blue)
+    borderWidth: 2, // Make the border slightly thicker for emphasis
   },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 10,
-    paddingHorizontal: 12,
+  input: { 
+    padding: 15, 
+    fontSize: 16, 
+    color: "#000" 
   },
-  input: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    fontSize: 14,
-    color: "#000",
+  button: { 
+    backgroundColor: "#007AFF", 
+    padding: 15, 
+    borderRadius: 10, 
+    alignItems: "center", 
+    marginTop: 10 
   },
-  inputErrorBorder: {
-    borderColor: "red",
+  buttonText: { 
+    color: "#fff", 
+    fontSize: 16, 
+    fontWeight: "bold" 
   },
-  errorText: {
-    fontSize: 12,
-    color: "red",
-    marginTop: 4,
-  },
-
-  loginButton: {
-    backgroundColor: "#007AFF",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    borderRadius: 10,
-    marginTop: 20,
-    gap: 8,
-  },
-  loginButtonDisabled: { opacity: 0.6 },
-  loginButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
-
-  rolePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#eee",
-    backgroundColor: "#fff",
-  },
-  rolePillActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
-  },
-  rolePillText: {
-    fontSize: 14,
-    color: "#007AFF",
-    fontWeight: "600",
-  },
-  rolePillTextActive: { color: "#fff" },
-
-  footer: { alignItems: "center"},
-  footerText: { fontSize: 12, color: "#999" },
+  spacer: {
+    height: 50, // Added to provide extra padding at the bottom when the keyboard is up
+  }
 });
