@@ -169,9 +169,8 @@ export default function BathroomLogScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem}onPress={() => {
-            // ✅ Pass data to Bathroom Log using `router.push`
             router.push({
-              pathname: '/bathroomlogin', // Correct path
+              pathname: '/bathroomlog',
               params: { 
                 exam_id: exam_id, 
                 subject: subject, 

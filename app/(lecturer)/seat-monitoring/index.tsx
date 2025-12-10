@@ -27,7 +27,7 @@ export default function SeatMonitoring() {
 
   const navigateToBathroomLog = () => {
     router.replace({
-      pathname: "/bathroomlogin",
+      pathname: "/bathroomlog",
       params: { exam_id, subject, location, time }
     });
   };
