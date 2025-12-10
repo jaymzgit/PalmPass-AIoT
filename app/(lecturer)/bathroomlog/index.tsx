@@ -100,13 +100,12 @@ export default function BathroomLogScreen() {
       {/* NAV BAR */}
     <View style={styles.headerWrapper}>
       <View style={styles.navBar}>
-        {/* ✅ FIXED: Use goBackToHall logic here too */}
-        <TouchableOpacity onPress={goBackToHall} style={styles.navLeft}>
+        <TouchableOpacity onPress={() => router.replace("/")} style={styles.navLeft}>
            <Ionicons name="chevron-back" size={24} color="#38bdf8" />
         </TouchableOpacity>
 
         <View style={styles.navCenter}>
-          <Text style={styles.navTitle}>{exam_id}: {subject}</Text>
+          <Text style={styles.navTitle}>{exam_id}</Text>
           <Text style={styles.navSub}>{location} | {time}</Text>
         </View>
       </View>

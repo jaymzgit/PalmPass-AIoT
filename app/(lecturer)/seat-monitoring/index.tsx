@@ -148,7 +148,7 @@ export default function SeatMonitoring() {
             <Ionicons name="chevron-back" size={24} color="#38bdf8" />
           </TouchableOpacity>
           <View style={styles.navCenter}>
-            <Text style={styles.navTitle}>{exam_id} - {subject}</Text>
+            <Text style={styles.navTitle}>{exam_id}</Text>
             <Text style={styles.navSub}>{location} | {time}</Text>
           </View>
         </View>

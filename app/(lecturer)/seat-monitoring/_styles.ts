@@ -25,8 +25,8 @@ export const styles = StyleSheet.create({
   navCenter: { flex: 1, alignItems: "center" ,justifyContent:"center",paddingTop: 10},
   navRight: { width: 40, alignItems: "flex-end" },
   navTitle: { color: "white", fontSize: 18, fontWeight: "bold",marginBottom:-5},
-  navSubtitle: { color: "white", fontSize: 15, marginBottom:1},
-  navSub: { color: "#94a3b8", fontSize: 14 , marginTop:-5},
+  navSubtitle: { color: "white", fontSize: 14, marginBottom:1},
+  navSub: { color: "#94a3b8", fontSize: 14 , marginTop:10},
 
   // Separator line between title and search
   headerSeparator: {

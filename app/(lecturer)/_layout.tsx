@@ -6,7 +6,7 @@ export default function LecturerLayout() {
       <Stack.Screen
         name="index"
         options={{ gestureEnabled: false, // Dashboard swipe-back disabled
-        animation: "slide_from_right" }}
+        animation: "slide_from_left" }}
       />
 
       <Stack.Screen
