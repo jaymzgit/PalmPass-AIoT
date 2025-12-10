@@ -6,7 +6,7 @@ import { collection, doc, onSnapshot, query, updateDoc, where } from "firebase/f
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { db, firebaseAuth } from "../../src/firebase";
+import { db } from "../../../src/firebase";
 import SeatDetails from "../seat-details";
 import { styles } from "./_styles";
 
@@ -26,7 +26,7 @@ export default function SeatMonitoring() {
   const router = useRouter();
 
   const navigateToBathroomLog = () => {
-    router.push({
+    router.replace({
       pathname: "/bathroomlogin",
       params: { exam_id, subject, location, time }
     });
@@ -139,33 +139,18 @@ export default function SeatMonitoring() {
     );
   }
 
-  const handleNavigateToBathroomLog = () => {
-    router.push({
-      pathname: "/bathroomlogin",
-      params: { 
-        exam_id: exam_id, 
-        subject: subject, 
-        location: location, 
-        time: time 
-      }
-    });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* HEADER WITH SEARCH */}
       <View style={styles.headerWrapper}>
         <View style={styles.navBar}>
-          <TouchableOpacity onPress={() => router.push("./lecturer-dashboard")} style={styles.navLeft}>
+          <TouchableOpacity onPress={() => router.replace("/")} style={styles.navLeft}>
             <Ionicons name="chevron-back" size={24} color="#38bdf8" />
           </TouchableOpacity>
           <View style={styles.navCenter}>
-            <Text style={styles.navTitle}>{exam_id}: {subject}</Text>
+            <Text style={styles.navTitle}>{exam_id} - {subject}</Text>
             <Text style={styles.navSub}>{location} | {time}</Text>
           </View>
-          <TouchableOpacity style={styles.navRight} onPress={async () => { await firebaseAuth.signOut(); router.replace("./index.tsx"); }}>
-            <Ionicons name="log-out-outline" size={24} color="#94a3b8" />
-          </TouchableOpacity>
         </View>
 
         {/* SEPARATOR LINE */}

@@ -6,7 +6,7 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { db, firebaseAuth } from "../../src/firebase";
+import { db } from "../../../src/firebase";
 import { styles } from "./_styles";
 
 
@@ -109,16 +109,6 @@ export default function BathroomLogScreen() {
           <Text style={styles.navTitle}>{exam_id}: {subject}</Text>
           <Text style={styles.navSub}>{location} | {time}</Text>
         </View>
-
-        <TouchableOpacity
-            style={styles.navRight}
-            onPress={async () => {
-              await firebaseAuth.signOut();
-              router.replace("./index.tsx");
-            }}
-          >
-            <Ionicons name="log-out-outline" size={24} color="#94a3b8" />
-        </TouchableOpacity>
       </View>
 
           {/* SEPARATOR LINE */}

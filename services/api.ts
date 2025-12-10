@@ -1,16 +1,16 @@
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    limit,
-    onSnapshot,
-    query,
-    setDoc,
-    where
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  query,
+  setDoc,
+  where
 } from "firebase/firestore";
 
-import { db } from "../firebaseConfig";
+import { db } from "../src/firebase";
 
 export interface Student {
   id: string;
@@ -77,9 +77,61 @@ export const getStudentProfile = async (uid: string) => {
   }
 };
 
-// Get Student Exams (Mock)
-export const getStudentExams = async () => {
-  return await getActiveExams();
+export const getStudentExams = async (uid: string) => {
+  try {
+    // 1. Get the Student's Matric No using their UID
+    const studentProfile = await getStudentProfile(uid);
+    
+    if (!studentProfile || !studentProfile.matric_no) {
+      console.log("No student profile found for this UID.");
+      return [];
+    }
+
+    const matricNo = studentProfile.matric_no;
+
+    // 2. Find all Attendance records for this Matric No
+    // This tells us which exams they are registered for
+    const attendanceQuery = query(
+      collection(db, "ATTENDANCE"),
+      where("matric_no", "==", matricNo)
+    );
+    
+    const attendanceSnap = await getDocs(attendanceQuery);
+    
+    if (attendanceSnap.empty) {
+      return []; // Student has no registered exams
+    }
+
+    // Extract all Exam IDs
+    const registeredExamIds = attendanceSnap.docs.map(doc => doc.data().exam_id);
+
+    // 3. Fetch details for each Exam ID from the EXAM collection
+    const examPromises = registeredExamIds.map(async (examId) => {
+      const examDocRef = doc(db, "EXAM", examId);
+      const examSnap = await getDoc(examDocRef);
+
+      if (examSnap.exists()) {
+        const data = examSnap.data();
+        return {
+          id: examSnap.id,
+          code: data.exam_id,
+          name: data.subject,
+          venue: data.location,
+          time: `${data.start_time} - ${data.end_time}`,
+          isActive: true // You could add date logic here to check if it's past
+        };
+      }
+      return null;
+    });
+
+    // Wait for all exam fetches to complete and filter out any nulls
+    const exams = await Promise.all(examPromises);
+    return exams.filter(exam => exam !== null);
+
+  } catch (error) {
+    console.error("Error fetching student exams:", error);
+    return [];
+  }
 };
 
 // --- EXAM & MONITORING ---
