@@ -38,7 +38,7 @@ export default function SeatMonitoring() {
 
   const [seating, setSeating] = useState<any[]>([]);
   const [studentMap, setStudentMap] = useState<Record<string, any>>({});
-  const [bathroomIds, setBathroomIds] = useState<string[]>([]); 
+  const [bathroomIds, setBathroomIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [isStudentsLoaded, setStudentsLoaded] = useState(false);
@@ -63,15 +63,15 @@ export default function SeatMonitoring() {
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map((d) => {
         const docData = d.data();
-        
+
         // Get matric_no from ATTENDANCE
         const matricNo = docData.matric_no;
-        
+
         // Look up student details using matric_no
         const studentData = studentMap[matricNo] || {};
-        
-      
-        
+
+
+
         return {
           ...docData,
           attendance_id: d.id,
@@ -105,7 +105,9 @@ export default function SeatMonitoring() {
   // 3. LOGIC
   const getSeatColor = useCallback((s: any) => {
     if (s.status === "Absent") return "#ef4444";
-    if (bathroomIds.includes(s.student_id)) return "#f59e0b"; 
+    if (bathroomIds.includes(s.student_id)) return "#f59e0b";
+    // Add explicit status check
+    if (s.status === "Bathroom" || s.status === "Toilet") return "#f59e0b";
     if (s.status === "Present") return "#22c55e";
     return "#334155";
   }, [bathroomIds]);
@@ -113,7 +115,10 @@ export default function SeatMonitoring() {
   const updateStatus = async (status: string) => {
     if (!selectedStudent) return;
     try {
-      await updateDoc(doc(db, "ATTENDANCE", selectedStudent.attendance_id), { status });
+      await updateDoc(doc(db, "ATTENDANCE", selectedStudent.attendance_id), {
+        status,
+        timestamp: new Date() // Record time for Bathroom Log
+      });
       setSelectedStudent(null);
     } catch { Alert.alert("Error", "Failed to update status"); }
   };
@@ -144,7 +149,7 @@ export default function SeatMonitoring() {
       {/* HEADER WITH SEARCH */}
       <View style={styles.headerWrapper}>
         <View style={styles.navBar}>
-          <TouchableOpacity onPress={() => router.replace("/")} style={styles.navLeft}>
+          <TouchableOpacity onPress={() => router.replace("/(lecturer)/dashboard")} style={styles.navLeft}>
             <Ionicons name="chevron-back" size={24} color="#38bdf8" />
           </TouchableOpacity>
           <View style={styles.navCenter}>
@@ -160,12 +165,12 @@ export default function SeatMonitoring() {
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={20} color="#94a3b8" />
-            <TextInput 
-              style={styles.searchInput} 
-              placeholder="Search by Table, Name, or Matric No..." 
-              placeholderTextColor="#94a3b8" 
-              value={search} 
-              onChangeText={setSearch} 
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by Table, Name, or Matric No..."
+              placeholderTextColor="#94a3b8"
+              value={search}
+              onChangeText={setSearch}
             />
           </View>
         </View>
@@ -191,7 +196,7 @@ export default function SeatMonitoring() {
               <View style={styles.statusIconContainer}>
                 {s.status === "Present" && !bathroomIds.includes(s.student_id) && <Ionicons name="checkmark-circle-outline" size={20} color="white" />}
                 {s.status === "Absent" && <Ionicons name="close-circle-outline" size={20} color="white" />}
-                {bathroomIds.includes(s.student_id) && <Ionicons name="time-outline" size={20} color="white" />}
+                {(bathroomIds.includes(s.student_id) || s.status === "Toilet" || s.status === "Bathroom") && <Ionicons name="time-outline" size={20} color="white" />}
                 {s.status === "Pending" && <Ionicons name="person-outline" size={20} color="#94a3b8" />}
               </View>
             </TouchableOpacity>
@@ -201,13 +206,13 @@ export default function SeatMonitoring() {
 
       {/* MODAL */}
       {selectedStudent && (
-        <SeatDetails 
-          visible={!!selectedStudent} 
-          student={selectedStudent} 
-          onClose={() => setSelectedStudent(null)} 
-          getSeatColor={getSeatColor} 
-          updateStatus={updateStatus} 
-          formatTime={(d: any) => d ? d.toLocaleTimeString() : "-"} 
+        <SeatDetails
+          visible={!!selectedStudent}
+          student={selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          getSeatColor={getSeatColor}
+          updateStatus={updateStatus}
+          formatTime={(d: any) => d ? d.toLocaleTimeString() : "-"}
         />
       )}
 

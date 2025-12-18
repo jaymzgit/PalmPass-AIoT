@@ -13,7 +13,7 @@ const firebaseConfig = {
   storageBucket: "palmpass-39e86.firebasestorage.app",
   messagingSenderId: "602650454669",
   // Derived auth domain (usually projectId.firebaseapp.com)
-  authDomain: "palmpass-39e86.firebaseapp.com" 
+  authDomain: "palmpass-39e86.firebaseapp.com"
 };
 
 let app: FirebaseApp;
@@ -22,18 +22,26 @@ let auth: Auth;
 if (getApps().length === 0) {
   // First time initialization
   app = initializeApp(firebaseConfig);
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-  });
+  if (typeof getReactNativePersistence === 'function') {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+    });
+  } else {
+    auth = getAuth(app);
+  }
 } else {
   // App already exists (Fast Refresh)
   app = getApp();
   try {
     auth = getAuth(app);
   } catch {
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-    });
+    if (typeof getReactNativePersistence === 'function') {
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+      });
+    } else {
+      auth = getAuth(app);
+    }
   }
 }
 

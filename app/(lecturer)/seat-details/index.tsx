@@ -77,6 +77,13 @@ export default function SeatDetails({ visible, student, onClose, getSeatColor, u
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: "#f59e0b" }]}
+              onPress={() => updateStatus("Toilet")}
+            >
+              <Text style={styles.btnText}>⏳ Mark Bathroom</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.actionBtn, { backgroundColor: "#ef4444" }]}
               onPress={() => updateStatus("Absent")}
             >

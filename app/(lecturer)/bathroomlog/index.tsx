@@ -1,6 +1,6 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { AlertTriangle, ArrowLeft, Clock, Search, User } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -37,24 +37,52 @@ export default function BathroomLogScreen() {
   const [search, setSearch] = useState("");
   const [tick, setTick] = useState(0);
 
-  // 2. LIVE LISTENER (Looking at STUDENT collection, same as Scanner)
+  // 2. LIVE LISTENER (Combined)
   useEffect(() => {
     if (!exam_id) return;
 
-    // We query the STUDENT collection for this specific Exam
-    // We filter locally for 'bathroom' or 'suspicious' to show in the log
-    const q = query(collection(db, "STUDENT"), where("examCode", "==", exam_id));
+    // A. Load Student Map first (for names)
+    // Note: We listen to STUDENT just in case names update, similar to Seat Monitoring
+    const unsubStudents = onSnapshot(collection(db, "STUDENT"), (snap) => {
+      const map: Record<string, any> = {};
+      snap.forEach(doc => {
+        const d = doc.data();
+        map[d.matric_no] = d;
+      });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allStudents = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // B. Listen to ATTENDANCE for this exam
+      const q = query(collection(db, "ATTENDANCE"), where("exam_id", "==", exam_id));
+      const unsubAttendance = onSnapshot(q, (attSnap) => {
+        const outList: any[] = [];
 
-      // Filter: Only show students who are NOT seated
-      const outStudents = allStudents.filter((s: any) => s.status === 'bathroom' || s.status === 'suspicious');
+        attSnap.forEach((doc) => {
+          const attData = doc.data();
+          // Filter for Toilet/Bathroom status
+          if (attData.status === "Toilet" || attData.status === "Bathroom") {
+            const studentInfo = map[attData.matric_no] || {};
 
-      setStudents(outStudents);
+            outList.push({
+              id: doc.id,
+              name: studentInfo.name || "Unknown",
+              matric_no: attData.matric_no,
+              seat: attData.table_no || "N/A",
+              timeOut: attData.timestamp ?
+                (attData.timestamp.toDate ? attData.timestamp.toDate() : new Date(attData.timestamp))
+                : new Date(),
+            });
+          }
+        });
+
+        // Sort by timeOut (most recent first)
+        outList.sort((a, b) => b.timeOut.getTime() - a.timeOut.getTime());
+        setStudents(outList);
+      });
+
+      // Cleanup for attendance listener when students listener re-runs (unlikely but safe)
+      return () => unsubAttendance();
     });
 
-    return () => unsubscribe();
+    return () => unsubStudents();
   }, [exam_id]);
 
   // 3. TIMER (Updates "Minutes Ago" every 60s)
@@ -79,10 +107,9 @@ export default function BathroomLogScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={THEME.bg} />
 
-      {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ArrowLeft size={24} color={THEME.blue} />
+        <TouchableOpacity onPress={() => router.replace("/(lecturer)/dashboard")} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={THEME.blue} />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={styles.navTitle}>{exam_id || "Exam"}</Text>
@@ -94,7 +121,7 @@ export default function BathroomLogScreen() {
       {/* SEARCH BAR */}
       <View style={styles.searchContainer}>
         <View style={styles.searchWrapper}>
-          <Search size={20} color={THEME.subtext} />
+          <Ionicons name="search" size={20} color={THEME.subtext} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search Name or Seat..."
@@ -108,7 +135,7 @@ export default function BathroomLogScreen() {
       {/* LIST CONTENT */}
       <ScrollView style={styles.content}>
         <View style={styles.sectionHeader}>
-          <Clock size={18} color={THEME.subtext} />
+          <Ionicons name="time-outline" size={18} color={THEME.subtext} />
           <Text style={styles.sectionTitle}> BATHROOM LOG (LIVE)</Text>
         </View>
 
@@ -131,10 +158,10 @@ export default function BathroomLogScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.logTime, { color: isUrgent ? THEME.red : THEME.blue }]}>
-                    {mins} min ago
+                    {student.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {mins} min ago
                   </Text>
                   {isUrgent && <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                    <AlertTriangle size={12} color={THEME.red} />
+                    <Ionicons name="alert-circle" size={12} color={THEME.red} />
                     <Text style={{ color: THEME.red, fontSize: 10, marginLeft: 4, fontWeight: 'bold' }}>ALERT</Text>
                   </View>}
                 </View>
@@ -145,19 +172,20 @@ export default function BathroomLogScreen() {
         <View style={{ height: 50 }} />
       </ScrollView>
 
-      {/* BOTTOM TABS */}
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabBtn} onPress={() => router.replace({
           pathname: "/(lecturer)/seat-monitoring",
           params: { exam_id, subject, location, time }
         })}>
-          <User size={24} color={THEME.subtext} />
+          {/* Inactive Icon - Gray */}
+          <Ionicons name="grid-outline" size={24} color="#64748b" />
           <Text style={styles.tabText}>Hall Status</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabBtn}>
-          <Clock size={24} color={THEME.blue} />
-          <Text style={[styles.tabText, { color: THEME.blue }]}>Bathroom Log</Text>
+          {/* Active Icon - Blue */}
+          <Ionicons name="time-outline" size={24} color="#38bdf8" />
+          <Text style={[styles.tabText, { color: "#38bdf8", fontWeight: "bold" }]}>Bathroom Log</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -169,30 +197,72 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: THEME.bg, paddingTop: Platform.OS === 'android' ? 30 : 0 },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', padding: 15, borderBottomWidth: 1, borderBottomColor: THEME.border },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#334155", // Match seat-monitoring
+    backgroundColor: "#1e293b",   // Match seat-monitoring
+  },
   backBtn: { padding: 5 },
-  navTitle: { color: THEME.text, fontSize: 18, fontWeight: 'bold' },
-  navSub: { color: THEME.subtext, fontSize: 12 },
+  navTitle: { color: "white", fontSize: 18, fontWeight: "bold" },
+  navSub: { color: "#94a3b8", fontSize: 12 }, // Match seat-monitoring color
 
   // Search
-  searchContainer: { padding: 15, paddingBottom: 5 },
-  searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: THEME.card, borderRadius: 8, paddingHorizontal: 10, borderWidth: 1, borderColor: THEME.border },
-  searchInput: { flex: 1, color: THEME.text, padding: 10, height: 45 },
+  searchContainer: {
+    padding: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: "#1e293b" // Match seat-monitoring
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: "#334155", // Match seat-monitoring
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    borderWidth: 0, // Removed border to match seat-monitoring
+  },
+  searchInput: { flex: 1, color: "white", padding: 10, height: 45 },
 
   // Content
   content: { flex: 1, padding: 15 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  sectionTitle: { color: THEME.subtext, fontWeight: 'bold', fontSize: 12, marginLeft: 8 },
+  sectionTitle: { color: "white", fontWeight: "bold", fontSize: 16, marginLeft: 8 }, // Match seat-monitoring
   emptyText: { color: THEME.subtext, textAlign: 'center', marginTop: 30 },
 
   // Log Card
-  logItem: { padding: 15, borderRadius: 8, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderLeftWidth: 4, borderWidth: 1 },
-  logName: { color: THEME.text, fontWeight: 'bold', fontSize: 16 },
-  logSub: { color: THEME.subtext, fontSize: 12, marginTop: 4 },
-  logTime: { fontWeight: 'bold', fontSize: 16 },
+  logItem: {
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderLeftWidth: 4,
+    backgroundColor: "#1e293b", // Match seat-monitoring card
+    borderWidth: 0 // Removed border
+  },
+  logName: { color: "white", fontWeight: "bold", fontSize: 15 },
+  logSub: { color: "#94a3b8", fontSize: 12, marginTop: 4 },
+  logTime: { fontWeight: "bold", fontSize: 14, color: "#38bdf8" },
 
-  // Tabs
-  tabBar: { flexDirection: 'row', height: 70, borderTopWidth: 1, borderTopColor: THEME.border, backgroundColor: THEME.card },
-  tabBtn: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tabText: { color: THEME.subtext, fontSize: 10, marginTop: 4 },
+  // Tabs - EXACT MATCH from seat-monitoring
+  tabBar: {
+    flexDirection: "row",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#0f172a",
+    borderTopWidth: 1,
+    borderTopColor: "#334155",
+    height: 85,
+    paddingBottom: 25,
+    alignItems: "center",
+    justifyContent: "space-around",
+  },
+  tabBtn: { alignItems: "center", justifyContent: "center", flex: 1 },
+  tabText: { color: "#64748b", fontSize: 11, marginTop: 4, fontWeight: "600" },
 });
