@@ -36,11 +36,13 @@ export default function LoginPage() {
   const [role, setRole] = useState<"lecturer" | "student">("lecturer");
 
   const [errors, setErrors] = useState({ email: "", password: "" });
+  const [authError, setAuthError] = useState(""); // For authentication errors like wrong password
 
   const handleRoleChange = (newRole: "lecturer" | "student") => {
     if (role !== newRole) {
       setRole(newRole);
       setErrors({ email: "", password: "" });
+      setAuthError(""); // Clear auth error when switching roles
     }
   };
 
@@ -61,6 +63,7 @@ export default function LoginPage() {
     };
 
     setErrors(newErrors);
+    setAuthError(""); // Clear previous auth error
 
     if (newErrors.email || newErrors.password) return;
 
@@ -99,12 +102,21 @@ export default function LoginPage() {
         }
       }
     } catch (error: any) {
-      let msg = "Authentication failed.";
-      if (error.code === 'auth/wrong-password') msg = "Incorrect password.";
-      else if (error.code === 'auth/user-not-found') msg = "User not found. Please sign up.";
-      else if (error.code === 'auth/invalid-email') msg = "Invalid email format.";
-      else if (error.code === 'auth/email-already-in-use') msg = "Email already registered.";
-      Alert.alert("Error", msg);
+      let msg = "Authentication failed. Please try again.";
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        msg = "Incorrect email or password. Please try again.";
+      } else if (error.code === 'auth/user-not-found') {
+        msg = "No account found with this email. Please sign up.";
+      } else if (error.code === 'auth/invalid-email') {
+        msg = "Please enter a valid email address.";
+      } else if (error.code === 'auth/email-already-in-use') {
+        msg = "This email is already registered. Please login instead.";
+      } else if (error.code === 'auth/weak-password') {
+        msg = "Password is too weak. Please use at least 6 characters.";
+      } else if (error.code === 'auth/too-many-requests') {
+        msg = "Too many failed attempts. Please try again later.";
+      }
+      setAuthError(msg); // Show inline error instead of popup
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +165,7 @@ export default function LoginPage() {
                   placeholder={role === "student" ? "matric@student.utem.edu.my" : "lecturer@utem.edu.my"}
                   placeholderTextColor="#64748b"
                   value={email}
-                  onChangeText={(t) => { setEmail(t); setErrors({ ...errors, email: "" }); }}
+                  onChangeText={(t) => { setEmail(t); setErrors({ ...errors, email: "" }); setAuthError(""); }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   returnKeyType="next"
@@ -176,7 +188,7 @@ export default function LoginPage() {
                   placeholderTextColor="#64748b"
                   value={password}
                   secureTextEntry={!showPassword}
-                  onChangeText={(t) => { setPassword(t); setErrors({ ...errors, password: "" }); }}
+                  onChangeText={(t) => { setPassword(t); setErrors({ ...errors, password: "" }); setAuthError(""); }}
                   returnKeyType="go"
                   onSubmitEditing={handleAuthAction}
                 />
@@ -187,6 +199,14 @@ export default function LoginPage() {
               {/* 👇 ERROR TEXT ADDED HERE */}
               {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
             </View>
+
+            {/* AUTH ERROR BANNER */}
+            {authError ? (
+              <View style={styles.authErrorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#ef4444" />
+                <Text style={styles.authErrorText}>{authError}</Text>
+              </View>
+            ) : null}
 
             {!isRegistering && (
               <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotBtn}>
@@ -256,6 +276,26 @@ const styles = StyleSheet.create({
 
   // Style for the error message
   errorText: { color: "#ef4444", fontSize: 12, marginTop: 4, marginLeft: 4 },
+
+  // Style for auth error banner (wrong password, etc.)
+  authErrorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
+    borderWidth: 1,
+    borderColor: "#ef4444",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  authErrorText: {
+    color: "#ef4444",
+    fontSize: 13,
+    fontWeight: "500",
+    marginLeft: 8,
+    flex: 1,
+  },
 
   forgotBtn: { alignSelf: "flex-end", marginBottom: 24 },
   forgotText: { color: "#38bdf8", fontSize: 13, fontWeight: "600" },

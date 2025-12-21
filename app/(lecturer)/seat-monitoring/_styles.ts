@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0f172a" },
 
   // Header wrapper with border at the bottom
-  headerWrapper: { 
+  headerWrapper: {
     backgroundColor: "#1e293b",
     borderBottomWidth: 1,
     borderBottomColor: "#334155",
@@ -15,18 +15,17 @@ export const styles = StyleSheet.create({
   navBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 13,
     backgroundColor: "#1e293b",
   },
 
-  navLeft: { width: 40 },
-  navCenter: { flex: 1, alignItems: "center" ,justifyContent:"center",paddingTop: 10},
+  navLeft: { width: 40, alignItems: "flex-start" },
+  navCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
   navRight: { width: 40, alignItems: "flex-end" },
-  navTitle: { color: "white", fontSize: 18, fontWeight: "bold",marginBottom:-5},
-  navSubtitle: { color: "white", fontSize: 14, marginBottom:1},
-  navSub: { color: "#94a3b8", fontSize: 14 , marginTop:10},
+  navTitle: { color: "white", fontSize: 18, fontWeight: "bold" },
+  navSubtitle: { color: "white", fontSize: 14 },
+  navSub: { color: "#94a3b8", fontSize: 12, marginTop: 2 },
 
   // Separator line between title and search
   headerSeparator: {
@@ -35,8 +34,8 @@ export const styles = StyleSheet.create({
   },
 
   // Search bar now inside header
-  searchContainer: { 
-    paddingHorizontal: 16, 
+  searchContainer: {
+    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: "#1e293b",
@@ -67,7 +66,7 @@ export const styles = StyleSheet.create({
   legendContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop:2,
+    marginTop: 2,
     marginBottom: 20,
     paddingHorizontal: 20,
   },

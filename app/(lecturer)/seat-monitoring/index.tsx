@@ -156,6 +156,8 @@ export default function SeatMonitoring() {
             <Text style={styles.navTitle}>{exam_id}</Text>
             <Text style={styles.navSub}>{location} | {time}</Text>
           </View>
+          {/* Right spacer to balance the back button */}
+          <View style={styles.navRight} />
         </View>
 
         {/* SEPARATOR LINE */}

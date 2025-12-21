@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import React, { useEffect, useState } from 'react';
-import { Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Platform, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Import DB from your specific path
 import { db } from "../../../src/firebase";
@@ -36,6 +36,12 @@ export default function BathroomLogScreen() {
   const [students, setStudents] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [tick, setTick] = useState(0);
+
+  // Track students who have already been alerted (to avoid repeated popups)
+  const alertedStudentsRef = useRef<Set<string>>(new Set());
+
+  // Bathroom time limit in minutes
+  const BATHROOM_TIME_LIMIT = 6;
 
   // 2. LIVE LISTENER (Combined)
   useEffect(() => {
@@ -85,16 +91,65 @@ export default function BathroomLogScreen() {
     return () => unsubStudents();
   }, [exam_id]);
 
-  // 3. TIMER (Updates "Minutes Ago" every 60s)
+  // 3. TIMER (Updates every second for live countdown)
   useEffect(() => {
-    const timer = setInterval(() => setTick(t => t + 1), 60000);
+    const timer = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // 4. ALERT NOTIFICATION: Check for students exceeding bathroom time limit
+  useEffect(() => {
+    students.forEach((student) => {
+      const mins = Math.floor((Date.now() - student.timeOut) / 60000);
+
+      // Check if student exceeded time limit and hasn't been alerted yet
+      if (mins > BATHROOM_TIME_LIMIT && !alertedStudentsRef.current.has(student.id)) {
+        // Mark this student as alerted
+        alertedStudentsRef.current.add(student.id);
+
+        // Show alert popup
+        Alert.alert(
+          "⚠️ Bathroom Time Exceeded",
+          `${student.name} (Seat: ${student.seat}) has been in the bathroom for ${mins} minutes.\n\nTime limit: ${BATHROOM_TIME_LIMIT} minutes`,
+          [
+            {
+              text: "Dismiss",
+              style: "cancel"
+            },
+            {
+              text: "View Details",
+              onPress: () => {
+                // Scroll to the student or highlight them - for now just dismiss
+              }
+            }
+          ],
+          { cancelable: true }
+        );
+      }
+    });
+
+    // Clean up alerted students who are no longer in bathroom
+    const currentStudentIds = new Set(students.map(s => s.id));
+    alertedStudentsRef.current.forEach((id) => {
+      if (!currentStudentIds.has(id)) {
+        alertedStudentsRef.current.delete(id);
+      }
+    });
+  }, [students, tick]); // Re-check when students change or timer ticks
 
   // 4. HELPER: Calculate Minutes
   const getMinutesAgo = (timestamp: any) => {
     if (!timestamp) return 0;
     return Math.floor((Date.now() - timestamp) / 60000);
+  };
+
+  // 5. HELPER: Format elapsed time as MM:SS
+  const formatElapsedTime = (timestamp: any) => {
+    if (!timestamp) return "0:00";
+    const elapsed = Math.floor((Date.now() - timestamp) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // 5. HELPER: Search Filter
@@ -137,6 +192,10 @@ export default function BathroomLogScreen() {
         <View style={styles.sectionHeader}>
           <Ionicons name="time-outline" size={18} color={THEME.subtext} />
           <Text style={styles.sectionTitle}> BATHROOM LOG (LIVE)</Text>
+          {/* Live count badge */}
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>{students.length}</Text>
+          </View>
         </View>
 
         {filteredStudents.length === 0 ? (
@@ -144,10 +203,10 @@ export default function BathroomLogScreen() {
         ) : (
           filteredStudents.map((student: any) => {
             const mins = getMinutesAgo(student.timeOut);
-            const isUrgent = mins > 10;
+            const isUrgent = mins > BATHROOM_TIME_LIMIT;
 
             return (
-              <View key={student.id} style={[styles.logItem, {
+              <View key={`${student.id}-${tick}`} style={[styles.logItem, {
                 backgroundColor: isUrgent ? THEME.redBg : THEME.card,
                 borderLeftColor: isUrgent ? THEME.red : THEME.blue,
                 borderColor: isUrgent ? THEME.red : THEME.border
@@ -158,7 +217,10 @@ export default function BathroomLogScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.logTime, { color: isUrgent ? THEME.red : THEME.blue }]}>
-                    {student.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {mins} min ago
+                    {formatElapsedTime(student.timeOut)}
+                  </Text>
+                  <Text style={[styles.logTimeSub, { color: isUrgent ? THEME.red : THEME.subtext }]}>
+                    Started {student.timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                   {isUrgent && <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                     <Ionicons name="alert-circle" size={12} color={THEME.red} />
@@ -184,7 +246,7 @@ export default function BathroomLogScreen() {
 
         <TouchableOpacity style={styles.tabBtn}>
           {/* Active Icon - Blue */}
-          <Ionicons name="time-outline" size={24} color="#38bdf8" />
+          <Ionicons name="timer-outline" size={24} color="#38bdf8" />
           <Text style={[styles.tabText, { color: "#38bdf8", fontWeight: "bold" }]}>Bathroom Log</Text>
         </TouchableOpacity>
       </View>
@@ -230,6 +292,18 @@ const styles = StyleSheet.create({
   content: { flex: 1, padding: 15 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   sectionTitle: { color: "white", fontWeight: "bold", fontSize: 16, marginLeft: 8 }, // Match seat-monitoring
+  countBadge: {
+    backgroundColor: THEME.blue,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginLeft: 10,
+  },
+  countText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
   emptyText: { color: THEME.subtext, textAlign: 'center', marginTop: 30 },
 
   // Log Card
@@ -246,7 +320,8 @@ const styles = StyleSheet.create({
   },
   logName: { color: "white", fontWeight: "bold", fontSize: 15 },
   logSub: { color: "#94a3b8", fontSize: 12, marginTop: 4 },
-  logTime: { fontWeight: "bold", fontSize: 14, color: "#38bdf8" },
+  logTime: { fontWeight: "bold", fontSize: 18, color: "#38bdf8" },
+  logTimeSub: { fontSize: 11, marginTop: 2 },
 
   // Tabs - EXACT MATCH from seat-monitoring
   tabBar: {
